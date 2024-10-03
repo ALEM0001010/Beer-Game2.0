@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juego de la Jarra de Cerveza</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f7f7f7;
+            text-align: center; /* Centramos el texto por defecto */
+        }
+
+        .game-container {
+            position: relative;
+            width: 1000px;  /* Ampliar el ancho del contenedor */
+            height: 200px;
+            background: linear-gradient(to top, #dbaf90 30%, #87CEEB 70%); /* Fondo con horizonte marrón y azul */
+            overflow: hidden;
+            border: 2px solid #ff0000;
+        }
+
+        /* Sol en la esquina superior derecha */
+        #sol {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background-color: yellow;
+            border-radius: 50%;
+            box-shadow: 0 0 20px rgba(255, 255, 0, 0.8);
+        }
+
+        /* Nube que se desplaza de derecha a izquierda */
+        .nube {
+            position: absolute;
+            top: 30px;
+            width: 100px;
+            height: 50px;
+            background-color: #fff;
+            border-radius: 50px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            animation: moverNube 10s linear infinite;
+        }
+
+        /* Forma de la nube con pseudo-elementos */
+        .nube::before, .nube::after {
+            content: '';
+            position: absolute;
+            background-color: #fff;
+            border-radius: 50%;
+        }
+
+        .nube::before {
+            width: 60px;
+            height: 60px;
+            top: -20px;
+            left: 10px;
+        }
+
+        .nube::after {
+            width: 40px;
+            height: 40px;
+            top: -10px;
+            right: 10px;
+        }
+
+        @keyframes moverNube {
+            0% {
+                right: -120px;
+            }
+            100% {
+                right: 1020px; /* Se moverá completamente a la izquierda fuera del contenedor */
+            }
+        }
+
+        /* Jarra de cerveza */
+        #jarra {
+            position: absolute;
+            bottom: 0;
+            left: 50px;
+            width: 60px;  /* Ancho total de la jarra */
+            height: 80px; /* Altura total de la jarra */
+            background-color: #FFD700; /* Color dorado de la cerveza */
+            border-radius: 10px; /* Bordes redondeados */
+            border: 2px solid #8B4513; /* Borde marrón para simular el vidrio */
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.5); /* Sombra para el efecto de profundidad */
+        }
+
+        /* Espuma de la cerveza */
+        #espuma {
+            position: absolute;
+            top: -15px; /* Para simular la espuma que sobresale */
+            left: 0;
+            width: 100%;
+            height: 15px;
+            background-color: #FFFFFF; /* Color blanco de la espuma */
+            border-radius: 10px 10px 0 0; /* Bordes redondeados en la parte superior */
+        }
+
+        .cactus {
+            position: absolute;
+            width: 10px;
+            height: 20px;
+            background-color: #008000;
+            bottom: 0;
+        }
+
+        /* Recipiente de mejores puntuaciones con borde de arcoiris animado */
+        .high-scores {
+            margin-top: 20px;
+            padding: 10px;
+            border: 4px solid;
+            border-image: linear-gradient(45deg, red, orange, yellow, green, blue, indigo, violet) 1;
+            border-radius: 15px;
+            animation: rainbowBorder 5s linear infinite;
+            width: 300px; /* Ancho fijo para centrarlo bien */
+            margin: 20px auto; /* Centramos el contenedor */
+        }
+
+        /* Animación de arcoiris */
+        @keyframes rainbowBorder {
+            0% { border-image: linear-gradient(45deg, red, orange, yellow, green, blue, indigo, violet) 1; }
+            100% { border-image: linear-gradient(45deg, violet, indigo, blue, green, yellow, orange, red) 1; }
+        }
+
+        ol {
+            padding-left: 20px;
+            margin: 0;
+            text-align: left; /* Mantener alineado a la izquierda dentro del recuadro */
+        }
+
+        /* Estilo de los textos */
+        #status, #score {
+            margin: 10px 0; /* Espaciado entre el texto */
+            padding: 5px;   /* Añadir padding para evitar colisiones */
+        }
+
+        #status {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        #score {
+            font-size: 20px;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="game-container">
+    <div id="jarra">
+        <div id="espuma"></div>
+    </div>
+    <div id="sol"></div> <!-- Sol estático -->
+    <div class="nube"></div> <!-- Nube animada -->
+</div>
+
+<h2 id="status">Presiona espacio para saltar</h2>
+<h3 id="score">Puntuación: 0</h3>
+
+<div class="high-scores">
+    <h3>Mejores Puntuaciones:</h3>
+    <ol id="highScoresList">
+        <li>Puntuación 1: 0</li>
+        <li>Puntuación 2: 0</li>
+        <li>Puntuación 3: 0</li>
+    </ol>
+</div>
+
+<script>
+    const jarra = document.getElementById("jarra");
+    const status = document.getElementById("status");
+    const scoreElement = document.getElementById("score");
+    const highScoresList = document.getElementById("highScoresList");
+
+    let isJumping = false;
+    let position = 0;
+    let upInterval;
+    let downInterval;
+    let jumpPower = 5;
+    let isHoldingSpace = false;
+    let score = 0;
+    let gameOver = false;
+
+    // Función para obtener las mejores puntuaciones desde localStorage
+    function getHighScores() {
+        const highScores = JSON.parse(localStorage.getItem('highScores')) || [0, 0, 0];
+        return highScores;
+    }
+
+    // Función para actualizar el DOM con las mejores puntuaciones
+    function updateHighScoresDisplay() {
+        const highScores = getHighScores();
+        highScoresList.innerHTML = '';
+        highScores.forEach((score, index) => {
+            highScoresList.innerHTML += `<li>Puntuación ${index + 1}: ${score}</li>`;
+        });
+    }
+
+    // Función para guardar la puntuación si está entre las tres mejores
+    function saveHighScore(newScore) {
+        const highScores = getHighScores();
+        highScores.push(newScore);
+        highScores.sort((a, b) => b - a); // Ordenar de mayor a menor
+        highScores.splice(3); // Mantener solo las tres mejores
+        localStorage.setItem('highScores', JSON.stringify(highScores));
+        updateHighScoresDisplay();
+    }
+
+    // Inicializar el display de las mejores puntuaciones
+    updateHighScoresDisplay();
+
+    // Función para hacer saltar a la jarra
+    function jump() {
+        if (isJumping) return;
+        isJumping = true;
+        isHoldingSpace = true;
+
+        upInterval = setInterval(() => {
+            if (!isHoldingSpace || position >= 150) {
+                clearInterval(upInterval);
+                fall();
+            } else {
+                position += jumpPower;
+                jarra.style.bottom = position + "px";
+                jarra.style.transform = `rotate(${position * 10}deg)`; // Rotar la jarra mientras salta
+            }
+        }, 20);
+    }
+
+    // Función para hacer caer a la jarra
+    function fall() {
+        downInterval = setInterval(() => {
+            if (position <= 0) {
+                clearInterval(downInterval);
+                position = 0;
+                isJumping = false;
+            } else {
+                position -= jumpPower;
+                jarra.style.bottom = position + "px";
+                jarra.style.transform = `rotate(${position * 10}deg)`;
+            }
+        }, 20);
+    }
+
+    // Función para verificar colisiones
+    function checkCollision(jarraRect, cactusRect) {
+        return (
+            jarraRect.left + 10 < cactusRect.right - 10 &&
+            jarraRect.right - 10 > cactusRect.left + 10 &&
+            jarraRect.bottom - 10 > cactusRect.top + 10
+        );
+    }
+
+    // Función para crear cactus
+    function createCactus() {
+        const cactus = document.createElement("div");
+        cactus.classList.add("cactus");
+        cactus.style.right = "0";
+        document.querySelector(".game-container").appendChild(cactus);
+
+        let position = 0; // Posición del cactus
+        let speed = Math.random() * 3 + 2; // Velocidad aleatoria entre 2 y 5
+        let acceleration = 0.2; // Aceleración constante
+
+        // Animación del movimiento del cactus
+        function moveCactus() {
+            position += speed;
+            cactus.style.right = position + "px";
+
+            // Aumentar la velocidad continuamente
+            speed += acceleration;
+
+            // Verifica colisiones
+            const jarraRect = jarra.getBoundingClientRect();
+            const cactusRect = cactus.getBoundingClientRect();
+
+            if (checkCollision(jarraRect, cactusRect)) {
+                status.innerText = "¡Game Over! Recarga la página para jugar de nuevo.";
+                gameOver = true;
+                cactus.remove();
+                saveHighScore(score); // Guardar la puntuación final
+                return;
+            }
+
+            // Remueve el cactus si se sale de la pantalla
+            if (position >= 1000) {
+                cactus.remove();
+                updateScore(); // Actualizar el puntaje al esquivar un cactus
+                return;
+            }
+
+            requestAnimationFrame(moveCactus);
+        }
+
+        requestAnimationFrame(moveCactus);
+    }
+
+    // Función para generar cactus en intervalos aleatorios
+    function startCactusGeneration() {
+        let cactusCount = 0;
+
+        // Generar cactus en intervalos diferentes
+        setInterval(() => {
+            if (!gameOver) {
+                createCactus();
+                cactusCount++;
+            }
+        }, Math.random() * (2000 - 1000) + 1000); // Intervalo entre 1 y 2 segundos
+
+        // Generar otros cactus en diferentes intervalos
+        setInterval(() => {
+            if (!gameOver) {
+                createCactus();
+            }
+        }, Math.random() * (3000 - 1500) + 1500); // Intervalo entre 1.5 y 3 segundos
+
+        setInterval(() => {
+            if (!gameOver) {
+                createCactus();
+            }
+        }, Math.random() * (4000 - 2000) + 2000); // Intervalo entre 2 y 4 segundos
+    }
+
+    // Función para actualizar el puntaje
+    function updateScore() {
+        score++;
+        scoreElement.innerText = "Puntuación: " + score;
+    }
+
+    // Evento para detectar cuando se presiona la tecla espacio
+    document.addEventListener("keydown", function(event) {
+        if (event.code === "Space" && !isJumping) {
+            jump();
+        }
+    });
+
+    // Evento para detectar cuando se suelta la tecla espacio
+    document.addEventListener("keyup", function(event) {
+        if (event.code === "Space") {
+            isHoldingSpace = false;
+        }
+    });
+
+    // Iniciar el juego generando cactus
+    startCactusGeneration();
+
+</script>
+
+</body>
+</html>
